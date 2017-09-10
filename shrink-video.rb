@@ -23,11 +23,11 @@ Dir.glob("**/*") do |filename|
     # Skip if dotfile_skip in parent dir
     next if File.exist?(File.join(File.expand_path("..", File.dirname(filename)),config['dotfile_skip']))
     # Skip if file doesn't have required extension
-    next unless extensions.include? File.extname(filename).downcase
+    next unless config['extensions'].include? File.extname(filename).downcase
     # Skip if already in checked list
     next if File.readlines(config['checked_path']).grep(filename).any?
     # Skip if created in delay_days
-    next if Time.now - File.ctime(filename) < config['delay_days'] * 86400
+    next if Time.now - File.ctime(filename) < config['delay_days'].to_i * 86400
     
     # Add to checked list
     File.open(config['checked_path'],"a") { |f| f.puts(filename) }
@@ -47,11 +47,11 @@ Dir.glob("**/*") do |filename|
     quality = bitrate.to_f / ( width * height )
     if width > 1000
         # Transcode if too high quality, or if bigger than 720p
-        adjusted_threshold = threshold
+        adjusted_threshold = config['threshold'].to_f
         ( quality < adjusted_threshold ) && ( width < 1300 ) ? transcoding = false : transcoding = true
     else
         # Video below 720p has more information per pixel and needs higher threshold
-        adjusted_threshold = threshold + 1.2
+        adjusted_threshold = config['threshold'].to_f + 1.2
         quality < adjusted_threshold ? transcoding = false : transcoding = true
     end
     
