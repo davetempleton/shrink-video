@@ -1,5 +1,10 @@
 #!/usr/bin/env ruby
 
+# Rename this file to: shrink-video-conf.rb
+# Example paths below. Please change them to suit your needs.
+# Paths in /video-volume are where the video files will be shuffled around,
+# and should be the same file system to avoid wait times for moving files.
+
 # ACCESSORY FILES:
 def runningpath() "RUNNING" end
 def checkedpath() "checked" end
