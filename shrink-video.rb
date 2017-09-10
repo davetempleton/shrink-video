@@ -33,22 +33,28 @@ Dir.glob("**/*") do |filename|
         quality < ( threshold + 1.2 ) ? transcoding = false : ( transcoding = true; actthresh = threshold + 1.2 )
     end
     if transcoding
-        File.new(runningpath,"w") { |f| f.puts(filename) } # Create RUNNING file
+        File.open(runningpath,"w") { |f| f.puts(filename) } # Create RUNNING file
         width > 1280 ? encodewidth = 1280 : encodewidth = width # Max video size is 720p
         extbase = File.extname(filename)
         namebase = File.basename(filename, extbase)
         pathbase = File.dirname(filename)
-        workingfilepath = File.join(workingpath, namebase, ".mkv") # Temporary file path
+        workingfilepath = File.join(workingpath, namebase) + ".mkv" # Temporary file path
         workingfilepath_s = Shellwords.escape(workingfilepath) # Escape for safety
         # HandBrakeCLI command below. Two channel AAC audio only, x264 encoder, quality level 25, passthrough subtitles, MKV container.
-        `HandBrakeCLI -m -E ffaac -B 128 -6 stereo -X #{encodewidth} --loose-crop -e x264 -q 25 --x264-preset medium -s 1,2,3,4,5 -f mkv -i #{filename_s} -o #{workingfilepath_s}`
-        ( File.open(errorpath,"a") { |f| f.puts("Handbrake error: #{filename}") }; next ) if `$?`.to_i != 0 # Move on if HandBrakeCLI has non-zero exit code
+        handbrakecmd = "HandBrakeCLI -m -E ffaac -B 128 -6 stereo -X #{encodewidth} --loose-crop -e x264 -q 25 --x264-preset medium -s 1,2,3,4,5 -f mkv -i #{filename_s} -o #{workingfilepath_s}"
+        `#{handbrakecmd}`
+        if `$?`.to_i != 0 # Move on if HandBrakeCLI has non-zero exit code
+            File.open(errorpath,"a") { |f| f.puts("Handbrake error: #{filename}") }
+            File.unlink(runningpath)
+            next
+        end
         fulltrashdir = File.join(trashpath, pathbase)
         FileUtils.mkdir_p(fulltrashdir) unless File.directory?(fulltrashdir) # Make folder in trash folder to move old file to
         begin
-            FileUtils.mv(filename, File.join(fulltrashdir, namebase, extbase)) # Move old file to trash folder
+            FileUtils.mv(filename, File.join(fulltrashdir, File.basename(filename))) # Move old file to trash folder
         rescue
             File.open(errorpath,"a") { |f| f.puts("Move to trash error: #{filename}") } # Log error
+            File.unlink(runningpath)
             next
         else
             FileUtils.mv(workingfilepath, filename) # Only move new file from temporary location if move of old file works
