@@ -12,6 +12,7 @@ puts Dir.pwd
 Dir.glob("**/*") do |filename|
     next if File.directory?(filename)
     next if File.exist?(File.join(File.dirname(filename),dotfileskip))
+    next if File.exist?(File.join(File.expand_path("..", File.dirname(filename)),dotfileskip))
     next unless extensions.include? File.extname(filename).downcase
     next if File.readlines(checkedpath).grep(filename).any?
     next if Time.now - File.ctime(filename) < delaydays * 86400
