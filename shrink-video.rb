@@ -4,8 +4,9 @@ require "fileutils"
 require "shellwords"
 require "yaml"
 
-# Validate config and set up files
-config_path = File.join(File.dirname(File.expand_path(__FILE__)),"config.yml")
+# Load config and validate paths
+script_dir = File.dirname(File.expand_path(__FILE__))
+config_path = File.join(script_dir, "config.yml")
 abort "config.yml file does not exist in same folder as script" unless File.exist?(config_path)
 config = YAML.load_file(config_path)
 abort "Directory working_path does not exist" unless Dir.exist?(config['working_path'])
@@ -27,9 +28,9 @@ Dir.glob("**/*") do |filename|
     # Skip if not a file
     next if File.directory?(filename)
     # Skip if dotfile_skip in current dir
-    next if File.exist?(File.join(File.dirname(filename),config['dotfile_skip']))
+    next if File.exist?(File.join(File.dirname(filename), config['dotfile_skip']))
     # Skip if dotfile_skip in parent dir
-    next if File.exist?(File.join(File.expand_path("..", File.dirname(filename)),config['dotfile_skip']))
+    next if File.exist?(File.join(File.expand_path("..", File.dirname(filename)), config['dotfile_skip']))
     # Skip if file doesn't have required extension
     next unless config['extensions'].include?(File.extname(filename).downcase)
     # Skip if already in checked list
