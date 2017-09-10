@@ -4,9 +4,6 @@ require "fileutils"
 require "shellwords"
 require "yaml"
 
-# Do not run if already running or exited with uncaught exception
-abort "RUNNING file present" if File.exist?(config['running_path'])
-
 # Validate config and set up files
 config_path = File.join(File.dirname(File.expand_path(__FILE__)),"config.yml")
 abort "config.yml file does not exist in same folder as script" unless File.exist?(config_path)
@@ -16,6 +13,9 @@ abort "Directory trash_path does not exist" unless Dir.exist?(config['trash_path
 abort "dotfile_skip must begin with period" unless config['dotfile_skip'][0,1] == "."
 abort "All extensions must begin with period" unless config['extensions'].all?{ |ext| ext[0,1] == "." }
 FileUtils.touch(config['checked_path']) unless File.exist?(config['checked_path'])
+
+# Do not run if already running or exited with uncaught exception
+abort "RUNNING file present" if File.exist?(config['running_path'])
 
 # Run from current directory if argument is not passed
 Dir.chdir(ARGV[0]) unless ARGV.empty?
