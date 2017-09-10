@@ -10,6 +10,13 @@ config = YAML.load_file(File.join(File.dirname(File.expand_path(__FILE__)),"conf
 # Do not run if already running or exited with uncaught exception
 abort "RUNNING file present" if File.exist?(config['running_path'])
 
+# Validate config and set up files
+FileUtils.touch(config['checked_path']) unless File.exist?(checked_path)
+abort "Directory working_path does not exist" unless Dir.exist?(config['working_path'])
+abort "Directory trash_path does not exist" unless Dir.exist?(config['trash_path'])
+abort "dotfile_skip must begin with period" unless config['dotfile_skip'][0,1] == "."
+abort "All extensions must begin with period" unless config['extensions'].all?{ |ext| ext[0,1] == "." }
+
 # Run from current directory if argument is not passed
 Dir.chdir(ARGV[0]) unless ARGV.empty?
 puts Dir.pwd
@@ -23,7 +30,7 @@ Dir.glob("**/*") do |filename|
     # Skip if dotfile_skip in parent dir
     next if File.exist?(File.join(File.expand_path("..", File.dirname(filename)),config['dotfile_skip']))
     # Skip if file doesn't have required extension
-    next unless config['extensions'].include? File.extname(filename).downcase
+    next unless config['extensions'].include?(File.extname(filename).downcase)
     # Skip if already in checked list
     next if File.readlines(config['checked_path']).grep(filename).any?
     # Skip if created in delay_days
