@@ -1,0 +1,23 @@
+# Rename this file to: config.yml
+# Example paths below. Please change them to suit your needs.
+# Paths in /video-volume are where the video files will be shuffled around,
+# and should be the same file system to avoid wait times for moving files.
+
+running_path: RUNNING
+checked_path: checked
+too_big_before_path: toobigbefore
+too_big_after_path: toobigafter
+working_path: /video-volume/Library/shrink-video
+error_path: errors
+trash_path: /video-volume/shrink-video-trash
+transcoded_path: transcoded
+dotfile_skip: .donotshrink
+extensions:
+  - .mkv
+  - .mp4
+  - .m4v
+  - .avi
+  - .mpg
+# Quality threshold, dividing bitrate by pixel area
+threshold: 2.4
+delay_days: 7
