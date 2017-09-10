@@ -2,4 +2,4 @@ This script will traverse a directory recursively, find all video files ending w
 
 Given this script may take months to exit, depending how many and large the video files are present, state is maintained in several files. This script is meant for 1080p and smaller video files; it has not been optimized for 4K.
 
-You will need ruby, ffmpeg (for ffprobe), and HandBrakeCLI.
+You will need ruby, ffmpeg (for ffprobe), and HandBrakeCLI. The script makes some choices you may disagree with, like converting all 1080p files to 720p, outputting stereo audio, and using a X264 quality level of 25.
