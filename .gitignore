@@ -1,5 +1,5 @@
 *
 !.gitignore
 !shrink-video.rb
-!shrink-video-conf-sample.rb
+!config-sample.yml
 !README.md
