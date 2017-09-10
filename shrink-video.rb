@@ -11,7 +11,7 @@ config = YAML.load_file(File.join(File.dirname(File.expand_path(__FILE__)),"conf
 abort "RUNNING file present" if File.exist?(config['running_path'])
 
 # Validate config and set up files
-FileUtils.touch(config['checked_path']) unless File.exist?(checked_path)
+FileUtils.touch(config['checked_path']) unless File.exist?(config['checked_path'])
 abort "Directory working_path does not exist" unless Dir.exist?(config['working_path'])
 abort "Directory trash_path does not exist" unless Dir.exist?(config['trash_path'])
 abort "dotfile_skip must begin with period" unless config['dotfile_skip'][0,1] == "."
