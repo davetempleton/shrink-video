@@ -33,6 +33,7 @@ puts Dir.pwd
 # Traverse directory tree recursively
 Dir.glob("**/*") do |filename|
     
+    filename = filename.chomp
     # Skip if not a file
     next if File.directory?(filename)
     # Skip if dotfile_skip in current dir
