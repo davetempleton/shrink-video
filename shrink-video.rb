@@ -103,14 +103,21 @@ Dir.glob("**/*") do |filename|
         handbrake_cmd = "HandBrakeCLI -m -E ffaac -B 128 -6 stereo -X #{encode_width} --loose-crop -e x264 -q 25 --x264-preset medium -s 1,2,3,4,5 -f mkv -i #{filename_s} -o #{working_file_path_s}"
         `#{handbrake_cmd}`
         
-        # Move on if HandBrakeCLI has non-zero exit code
+        # Move on if HandBrakeCLI has non-zero exit code, potentially abandoning output file
         if `$?`.to_i != 0
             File.open(config['error_path'],"a") { |f| f.puts("Handbrake error: #{filename}") }
             File.unlink(config['running_path'])
             next
         end
         
-        # Move on if under 1MiB in size
+        # Move on if no output file found
+        unless File.exist?(working_file_path)
+            File.open(config['error_path'],"a") { |f| f.puts("No output file found: #{filename}") }
+            File.unlink(config['running_path'])
+            next
+        end
+        
+        # Move on if output under 1MiB in size
         output_size = File.size(working_file_path).to_f / 2**20
         if output_size < 1
             File.open(config['error_path'],"a") { |f| f.puts("Output under 1MiB, aborted: #{filename}") }
