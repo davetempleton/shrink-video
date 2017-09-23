@@ -34,6 +34,8 @@ puts Dir.pwd
 Dir.glob("**/*") do |filename|
     
     filename = filename.chomp
+    # Skip if file doesn't exist (happens when files deleted during long-running script)
+    next unless File.exist?(filename)
     # Skip if not a file
     next if File.directory?(filename)
     # Skip if dotfile_skip in current dir
