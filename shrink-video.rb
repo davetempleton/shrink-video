@@ -155,8 +155,9 @@ Dir.glob("**/*") do |filename|
         new_height = `ffprobe -v error -select_streams v:0 -show_entries stream=height -of default=noprint_wrappers=1:nokey=1 #{filename_out_s}`.chomp.to_i
         
         # Log if output file is still above threshold, or if we managed to create a larger file
-        if ( ( new_bitrate.to_f / ( new_width * new_height ) ) > adjusted_threshold ) || ( new_bitrate > bitrate )
-            File.open(config['too_big_after_path'],"a") { |f| f.puts(filename) }
+        after_threshold = new_bitrate.to_f / ( new_width * new_height )
+        if ( after_threshold > adjusted_threshold ) || ( new_bitrate > bitrate )
+            File.open(config['too_big_after_path'],"a") { |f| f.puts("#{after_threshold.round(1)}: #{filename}") }
         end
         
         # Delete RUNNING file
