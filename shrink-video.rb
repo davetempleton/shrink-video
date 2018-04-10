@@ -23,7 +23,7 @@ abort "Directory working_path does not exist" unless Dir.exist?(config['working_
 abort "Directory trash_path does not exist" unless Dir.exist?(config['trash_path'])
 abort "dotfile_skip must begin with period" unless config['dotfile_skip'][0,1] == "."
 abort "Thresholds must be numbers" unless ( config['threshold'].is_a? Numeric ) && ( config['threshold_sm'].is_a? Numeric )
-abort "Not a valid x264 encoder speed" unless speeds.include? config['speed']
+abort ("Not a valid x264 encoder speed; must be one of:\n" + speeds.to_s) unless speeds.include? config['speed']
 unless config['extensions'].all?{ |ext| ext[0,1] == "." } && config['mandatory_encode'].all?{ |ext| ext[0,1] == "." }
     abort "All extensions must begin with period"
 end
