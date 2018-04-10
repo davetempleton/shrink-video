@@ -131,7 +131,7 @@ Dir.glob("**/*") do |filename|
             next
         end
         
-        # Move on if output under 1MiB in size
+        # If output under 1MiB in size, try again with mp4 container
         output_size = File.size(working_file_path).to_f / 2**20
         if output_size < 1
             File.unlink(working_file_path)
@@ -143,9 +143,11 @@ Dir.glob("**/*") do |filename|
             working_file_path_s = Shellwords.escape(working_file_path)
             filename_out_s = Shellwords.escape(filename_out)
             
+            # Identical HandBrakeCLI command, only with mp4 container, and "web-optimized" file (option for mp4 only)
             handbrake_cmd = "/usr/bin/HandBrakeCLI -m -E ffaac -B 128 -6 stereo -X #{encode_width} --loose-crop -e x264 -q 25 --x264-preset #{config['speed']} -s 1,2,3,4,5 -f av_mp4 -O -i #{filename_s} -o #{working_file_path_s}"
             `#{handbrake_cmd}`
             
+            # Move on if output still under 1MiB in size
             output_size = File.size(working_file_path).to_f / 2**20
             if output_size < 1
                 File.unlink(working_file_path)
