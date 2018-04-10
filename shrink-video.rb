@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby
+#!/usr/bin/ruby
 
 require "fileutils"
 require "shellwords"
@@ -11,6 +11,9 @@ def no_ext(file)
     File.join(path, name)
 end
 
+# Valid x264 encoder speeds
+speeds = ["ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow", "placebo"]
+
 # Validate config and paths, and set up files
 script_dir = File.dirname(File.expand_path(__FILE__))
 config_path = File.join(script_dir, "config.yml")
@@ -19,7 +22,14 @@ config = YAML.load_file(config_path)
 abort "Directory working_path does not exist" unless Dir.exist?(config['working_path'])
 abort "Directory trash_path does not exist" unless Dir.exist?(config['trash_path'])
 abort "dotfile_skip must begin with period" unless config['dotfile_skip'][0,1] == "."
-abort "All extensions must begin with period" unless config['extensions'].all?{ |ext| ext[0,1] == "." }
+abort "Thresholds must be numbers" unless ( config['threshold'].is_a? Numeric ) && ( config['threshold_sm'].is_a? Numeric )
+abort "Not a valid x264 encoder speed" unless speeds.include? config['speed']
+unless config['extensions'].all?{ |ext| ext[0,1] == "." } && config['mandatory_encode'].all?{ |ext| ext[0,1] == "." }
+    abort "All extensions must begin with period"
+end
+config['mandatory_encode'].each do |ext|
+    abort "All extensions that must be mandatorily encoded must also be in the extensions array" unless config['extensions'].include? ext
+end
 FileUtils.touch(config['checked_path']) unless File.exist?(config['checked_path'])
 FileUtils.touch(config['error_path']) unless File.exist?(config['error_path'])
 
@@ -62,9 +72,9 @@ Dir.glob("**/*") do |filename|
     filename_s = Shellwords.escape(filename)
     
     # Find input video stats
-    bitrate = `ffprobe -v error -select_streams v:0 -show_entries format=bit_rate -of default=noprint_wrappers=1:nokey=1 #{filename_s}`.chomp.to_i
-    width = `ffprobe -v error -select_streams v:0 -show_entries stream=width -of default=noprint_wrappers=1:nokey=1 #{filename_s}`.chomp.to_i
-    height = `ffprobe -v error -select_streams v:0 -show_entries stream=height -of default=noprint_wrappers=1:nokey=1 #{filename_s}`.chomp.to_i
+    bitrate = `/usr/bin/ffprobe -v error -select_streams v:0 -show_entries format=bit_rate -of default=noprint_wrappers=1:nokey=1 #{filename_s}`.chomp.to_i
+    width = `/usr/bin/ffprobe -v error -select_streams v:0 -show_entries stream=width -of default=noprint_wrappers=1:nokey=1 #{filename_s}`.chomp.to_i
+    height = `/usr/bin/ffprobe -v error -select_streams v:0 -show_entries stream=height -of default=noprint_wrappers=1:nokey=1 #{filename_s}`.chomp.to_i
     
     # Script not meant to handle video bigger than 1080p
     File.open(config['too_big_before_path'],"a") { |f| f.puts(filename) } if width > 1920
@@ -77,9 +87,11 @@ Dir.glob("**/*") do |filename|
         ( quality < adjusted_threshold ) && ( width < 1300 ) ? transcoding = false : transcoding = true
     else
         # Video below 720p has more information per pixel and needs higher threshold
-        adjusted_threshold = config['threshold'].to_f + 1.2
+        adjusted_threshold = config['threshold_sm'].to_f
         quality < adjusted_threshold ? transcoding = false : transcoding = true
     end
+    
+    transcoding = true if config['mandatory_encode'].include?(File.extname(filename).downcase)
     
     # Transcoding and file management
     if transcoding
@@ -87,7 +99,7 @@ Dir.glob("**/*") do |filename|
         # Create RUNNING file
         File.open(config['running_path'],"w") { |f| f.puts(filename) }
         
-        # Set output video width. Max video size is 720p
+        # Set output video width. Max video size is 720pCC
         width > 1280 ? encode_width = 1280 : encode_width = width
         
         extbase = File.extname(filename)
@@ -102,7 +114,7 @@ Dir.glob("**/*") do |filename|
         filename_out_s = Shellwords.escape(filename_out)
         
         # HandBrakeCLI command below. Two channel AAC audio only, x264 encoder, quality level 25, passthrough subtitles, MKV container.
-        handbrake_cmd = "HandBrakeCLI -m -E ffaac -B 128 -6 stereo -X #{encode_width} --loose-crop -e x264 -q 25 --x264-preset medium -s 1,2,3,4,5 -f mkv -i #{filename_s} -o #{working_file_path_s}"
+        handbrake_cmd = "/usr/bin/HandBrakeCLI -m -E ffaac -B 128 -6 stereo -X #{encode_width} --loose-crop -e x264 -q 25 --x264-preset #{config['speed']} -s 1,2,3,4,5 -f mkv -i #{filename_s} -o #{working_file_path_s}"
         `#{handbrake_cmd}`
         
         # Move on if HandBrakeCLI has non-zero exit code, potentially abandoning output file
@@ -122,10 +134,25 @@ Dir.glob("**/*") do |filename|
         # Move on if output under 1MiB in size
         output_size = File.size(working_file_path).to_f / 2**20
         if output_size < 1
-            File.open(config['error_path'],"a") { |f| f.puts("Output under 1MiB, aborted: #{filename}") }
             File.unlink(working_file_path)
-            File.unlink(config['running_path'])
-            next
+            
+            # Create paths for output file temporary and final locations, but with mp4 extension
+            working_file_path = File.join(config['working_path'], namebase) + ".mp4"
+            filename_out = File.join(pathbase, namebase) + ".mp4"
+            # Escape filename for security
+            working_file_path_s = Shellwords.escape(working_file_path)
+            filename_out_s = Shellwords.escape(filename_out)
+            
+            handbrake_cmd = "/usr/bin/HandBrakeCLI -m -E ffaac -B 128 -6 stereo -X #{encode_width} --loose-crop -e x264 -q 25 --x264-preset #{config['speed']} -s 1,2,3,4,5 -f av_mp4 -O -i #{filename_s} -o #{working_file_path_s}"
+            `#{handbrake_cmd}`
+            
+            output_size = File.size(working_file_path).to_f / 2**20
+            if output_size < 1
+                File.unlink(working_file_path)
+                File.open(config['error_path'],"a") { |f| f.puts("Output under 1MiB, aborted: #{filename}") }
+                File.unlink(config['running_path'])
+                next
+            end
         end
         
         # Prepare to move input file into the trash
@@ -150,9 +177,9 @@ Dir.glob("**/*") do |filename|
         File.open(config['transcoded_path'],"a") { |f| f.puts(filename) }
         
         # Find output video stats
-        new_bitrate = `ffprobe -v error -select_streams v:0 -show_entries format=bit_rate -of default=noprint_wrappers=1:nokey=1 #{filename_out_s}`.chomp.to_i
-        new_width = `ffprobe -v error -select_streams v:0 -show_entries stream=width -of default=noprint_wrappers=1:nokey=1 #{filename_out_s}`.chomp.to_i
-        new_height = `ffprobe -v error -select_streams v:0 -show_entries stream=height -of default=noprint_wrappers=1:nokey=1 #{filename_out_s}`.chomp.to_i
+        new_bitrate = `/usr/bin/ffprobe -v error -select_streams v:0 -show_entries format=bit_rate -of default=noprint_wrappers=1:nokey=1 #{filename_out_s}`.chomp.to_i
+        new_width = `/usr/bin/ffprobe -v error -select_streams v:0 -show_entries stream=width -of default=noprint_wrappers=1:nokey=1 #{filename_out_s}`.chomp.to_i
+        new_height = `/usr/bin/ffprobe -v error -select_streams v:0 -show_entries stream=height -of default=noprint_wrappers=1:nokey=1 #{filename_out_s}`.chomp.to_i
         
         # Log if output file is still above threshold, or if we managed to create a larger file
         after_threshold = new_bitrate.to_f / ( new_width * new_height )
