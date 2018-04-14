@@ -5,7 +5,6 @@
 
 running_path: RUNNING
 checked_path: checked
-too_big_before_path: toobigbefore
 too_big_after_path: toobigafter
 working_path: /video-volume/Library/shrink-video
 error_path: errors
@@ -33,4 +32,6 @@ mandatory_encode:
 # Quality threshold, dividing bitrate by pixel area
 threshold: 2.4
 threshold_sm: 3.6
+encode_quality: 25
+max_width: 1280
 delay_days: 7
