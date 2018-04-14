@@ -16,6 +16,10 @@ end
 # Valid x264 encoder speeds
 speeds = ["ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow", "placebo"]
 
+# Make sure HandBrakeCLI and FFmpeg are installed
+abort "HandBrakeCLI not installed" if `which HandBrakeCLI`.empty?
+abort "ffmpeg not installed" if `which ffmpeg`.empty?
+
 # Validate config and paths, and set up files
 script_dir = File.dirname(File.expand_path(__FILE__))
 config_path = File.join(script_dir, "config.yml")
