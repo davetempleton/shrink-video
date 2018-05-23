@@ -47,7 +47,8 @@ FileUtils.touch(config['error_path']) unless File.exist?(config['error_path'])
 # Do not run if already running or exited with uncaught exception
 abort "RUNNING file present" if File.exist?(config['running_path'])
 
-# Print start message, initialize counter
+# Create RUNNING file, print start message, initialize counter
+FileUtils.touch(config['running_path'])
 puts "Starting #{Time.now}"
 counter = 0
 
@@ -90,6 +91,7 @@ Dir.glob("**/*") do |filename|
     bitrate = `ffprobe -v error -select_streams v:0 -show_entries format=bit_rate -of default=noprint_wrappers=1:nokey=1 #{filename_s}`.chomp.to_i
     width = `ffprobe -v error -select_streams v:0 -show_entries stream=width -of default=noprint_wrappers=1:nokey=1 #{filename_s}`.chomp.to_i
     height = `ffprobe -v error -select_streams v:0 -show_entries stream=height -of default=noprint_wrappers=1:nokey=1 #{filename_s}`.chomp.to_i
+    codec = `ffprobe -v error -select_streams v:0 -show_entries stream=codec_name -of default=noprint_wrappers=1:nokey=1 #{filename_s}`.chomp
     
     # Calculate arbitrary quality metric, and decide if to transcode
     old_quality = bitrate.to_f / ( width * height )
@@ -103,12 +105,14 @@ Dir.glob("**/*") do |filename|
         old_quality < threshold ? transcoding = false : transcoding = true
     end
     
+    # Transcode if in mandatory_encode list or HEVC
     transcoding = true if config['mandatory_encode'].include?(File.extname(filename).downcase)
+    transcoding = true if codec == "hevc"
     
     # Transcoding and file management
     if transcoding
         
-        # Create RUNNING file
+        # Write filename to RUNNING file
         File.open(config['running_path'],"w") { |f| f.puts(filename) }
         puts "Transcoding: #{filename}"
         
@@ -129,19 +133,19 @@ Dir.glob("**/*") do |filename|
         # HandBrakeCLI command below. Two channel AAC audio only, x264 encoder, passthrough subtitles, MKV container.
         handbrake_cmd = "HandBrakeCLI -m -E ffaac -B 128 -6 stereo -X #{encode_width} --loose-crop -e x264 -q #{config['encode_quality']} --x264-preset #{config['speed']} -s 1,2,3,4,5 -f mkv -i #{filename_s} -o #{working_file_path_s}"
         `#{handbrake_cmd} > /dev/null 2>&1`
-        
+=begin
         # Move on if HandBrakeCLI has non-zero exit code, deleting any output file
         unless $?.success?
             File.open(config['error_path'],"a") { |f| f.puts("Handbrake error: #{filename}") }
             File.unlink(working_file_path) if File.exist?(working_file_path)
-            File.unlink(config['running_path'])
+            File.open(config['running_path'],"w") { |f| f.puts("") }
             next
         end
-        
+=end
         # Move on if no output file found
         unless File.exist?(working_file_path)
             File.open(config['error_path'],"a") { |f| f.puts("No output file found: #{filename}") }
-            File.unlink(config['running_path'])
+            File.open(config['running_path'],"w") { |f| f.puts("") }
             next
         end
         
@@ -166,7 +170,7 @@ Dir.glob("**/*") do |filename|
             if output_size < 1
                 File.unlink(working_file_path)
                 File.open(config['error_path'],"a") { |f| f.puts("Output under 1MiB, aborted: #{filename}") }
-                File.unlink(config['running_path'])
+                File.open(config['running_path'],"w") { |f| f.puts("") }
                 next
             end
         end
@@ -182,7 +186,7 @@ Dir.glob("**/*") do |filename|
         rescue
             # If move fails, log error and move on, leaving output file in temporary folder
             File.open(config['error_path'],"a") { |f| f.puts("Move to trash error: #{filename}") }
-            File.unlink(config['running_path'])
+            File.open(config['running_path'],"w") { |f| f.puts("") }
             next
         else
             # Only move output file from temporary folder if input file was moved successfully
@@ -205,11 +209,15 @@ Dir.glob("**/*") do |filename|
         end
         
         # Delete RUNNING file
-        File.unlink(config['running_path'])
+        File.open(config['running_path'],"w") { |f| f.puts("") }
         
     end
     
 end
 
+# Delete RUNNING file
+File.unlink(config['running_path'])
+
+# Print exit information
 puts "Transcoded #{counter} file(s)."
-puts "Exiting."
+puts "Exiting #{Time.now}"
