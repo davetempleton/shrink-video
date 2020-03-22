@@ -80,12 +80,32 @@ Dir.glob("**/*") do |filename|
         in_checked = true if filename_no_ext == no_ext(line)
     end
     next if in_checked
+
+    # Escape filename for security
+    filename_s = Shellwords.escape(filename)
+    
+    # Prepare to move input file into the trash
+    full_trash_dir = File.join(config['trash_path'], File.dirname(filename))
+    FileUtils.mkdir_p(full_trash_dir) unless File.directory?(full_trash_dir)
+    
+    # Trash input file if there aren't both audio and video streams
+    input_streams = `ffprobe -v 0 -show_entries stream=codec_type #{filename_s}`
+    input_audio_streams = input_streams.scan(/codec_type=audio/).count
+    input_video_streams = input_streams.scan(/codec_type=video/).count
+    if ( input_audio_streams < 1 ) || ( input_video_streams < 1 )
+        begin
+            # Move input file to trash folder
+            FileUtils.mv(filename, File.join(full_trash_dir, File.basename(filename)))
+            File.open(config['error_path'],"a") { |f| f.puts("Input doesn't have audio and video streams, deleted: #{filename}") }
+        rescue
+            # If move fails, log error
+            File.open(config['error_path'],"a") { |f| f.puts("Move to trash error (before transcoding): #{filename}") }
+        end
+        next
+    end
     
     # Add to checked list
     File.open(config['checked_path'],"a") { |f| f.puts(filename) }
-    
-    # Escape filename for security
-    filename_s = Shellwords.escape(filename)
     
     # Find input video stats
     bitrate = `ffprobe -v error -select_streams v:0 -show_entries format=bit_rate -of default=noprint_wrappers=1:nokey=1 #{filename_s}`.chomp.to_i
@@ -175,9 +195,16 @@ Dir.glob("**/*") do |filename|
             end
         end
         
-        # Prepare to move input file into the trash
-        full_trash_dir = File.join(config['trash_path'], pathbase)
-        FileUtils.mkdir_p(full_trash_dir) unless File.directory?(full_trash_dir)
+        # Move on if output file doesn't have at least one video and audio stream
+        output_streams = `ffprobe -v 0 -show_entries stream=codec_type #{working_file_path_s}`
+        output_audio_streams = output_streams.scan(/codec_type=audio/).count
+        output_video_streams = output_streams.scan(/codec_type=video/).count
+        if ( output_audio_streams < 1 ) || ( output_video_streams < 1 )
+            File.unlink(working_file_path)
+            File.open(config['error_path'],"a") { |f| f.puts("Output doesn't have audio and video streams, aborted: #{filename}") }
+            File.open(config['running_path'],"w") { |f| f.puts("") }
+            next
+        end
         
         # Move input file to the trash, and output file to where the input file was
         begin
