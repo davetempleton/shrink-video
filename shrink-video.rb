@@ -80,7 +80,10 @@ Dir.glob("**/*") do |filename|
         in_checked = true if filename_no_ext == no_ext(line)
     end
     next if in_checked
-
+    
+    # Add to checked list
+    File.open(config['checked_path'],"a") { |f| f.puts(filename) }
+    
     # Escape filename for security
     filename_s = Shellwords.escape(filename)
     
@@ -103,9 +106,6 @@ Dir.glob("**/*") do |filename|
         end
         next
     end
-    
-    # Add to checked list
-    File.open(config['checked_path'],"a") { |f| f.puts(filename) }
     
     # Find input video stats
     bitrate = `ffprobe -v error -select_streams v:0 -show_entries format=bit_rate -of default=noprint_wrappers=1:nokey=1 #{filename_s}`.chomp.to_i
@@ -153,15 +153,7 @@ Dir.glob("**/*") do |filename|
         # HandBrakeCLI command below. Two channel AAC audio only, x264 encoder, passthrough subtitles, MKV container.
         handbrake_cmd = "HandBrakeCLI -m -E ffaac -B 128 -6 stereo -X #{encode_width} --loose-crop -e x264 -q #{config['encode_quality']} --x264-preset #{config['speed']} -s 1,2,3,4,5 -f mkv -i #{filename_s} -o #{working_file_path_s}"
         `#{handbrake_cmd} > /dev/null 2>&1`
-=begin
-        # Move on if HandBrakeCLI has non-zero exit code, deleting any output file
-        unless $?.success?
-            File.open(config['error_path'],"a") { |f| f.puts("Handbrake error: #{filename}") }
-            File.unlink(working_file_path) if File.exist?(working_file_path)
-            File.open(config['running_path'],"w") { |f| f.puts("") }
-            next
-        end
-=end
+        
         # Move on if no output file found
         unless File.exist?(working_file_path)
             File.open(config['error_path'],"a") { |f| f.puts("No output file found: #{filename}") }
