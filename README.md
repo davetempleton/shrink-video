@@ -13,7 +13,7 @@ Note that the script makes some hard-coded choices you may disagree with, like c
 Usage
 -----
 
-You will need ruby, ffmpeg (for ffprobe), and HandBrakeCLI. On Ubuntu 16.04 and newer: `apt install ruby rbenv ruby-build bundler ffmpeg handbrake-cli`. On Fedora 30 or newer: ``. Rename the configuration file to `config.yml` after editing. The only parameters you MUST edit are `working_path` and `trash_path`.
+You will need ruby, ffmpeg (for ffprobe), and HandBrakeCLI. On Ubuntu 16.04 and newer: `apt install ruby rbenv ruby-build bundler ffmpeg handbrake-cli`. On Fedora 30 or newer, install RPM Fusion's free repository, then: `dnf install handbrake ffmpeg`. Rename the configuration file to `config.yml` after editing. The only parameters you MUST edit are `working_path` and `trash_path` (do not use relative paths).
 
 The script can be run with an argument of a directory; otherwise, it will traverse the current directory looking for videos to encode. Multiple directories can be colon-separated. For example:
 
