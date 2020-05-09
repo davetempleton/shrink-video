@@ -52,8 +52,18 @@ FileUtils.touch(config['running_path'])
 puts "Starting #{Time.now}"
 counter = 0
 
-# Run from current directory if argument is not passed
-Dir.chdir(ARGV[0]) unless ARGV.empty?
+# Make array from directories, using either current directory or colon-separated argument
+ARGV.empty? ? directories = [Dir.pwd] : directories = ARGV[0].split(':')
+
+#Loop through each directory
+directories.each do |directory|
+
+# Validate directory
+unless Dir.exist?(directory)
+    puts "Not valid directory: #{directory}"
+    next
+end
+Dir.chdir(directory)
 puts Dir.pwd
 
 # Traverse directory tree recursively
@@ -232,6 +242,8 @@ Dir.glob("**/*") do |filename|
         
     end
     
+end
+
 end
 
 # Delete RUNNING file

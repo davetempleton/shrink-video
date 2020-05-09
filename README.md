@@ -13,6 +13,11 @@ Note that the script makes some hard-coded choices you may disagree with, like c
 Usage
 -----
 
-You will need ruby, ffmpeg (for ffprobe), and HandBrakeCLI; on Ubuntu 16.04 and newer: `apt install ruby rbenv ruby-build bundler ffmpeg handbrake-cli`. Rename the configuration file to `config.yml` after editing. The only parameters you MUST edit are `working_path` and `trash_path`.
+You will need ruby, ffmpeg (for ffprobe), and HandBrakeCLI. On Ubuntu 16.04 and newer: `apt install ruby rbenv ruby-build bundler ffmpeg handbrake-cli`. On Fedora 30 or newer: ``. Rename the configuration file to `config.yml` after editing. The only parameters you MUST edit are `working_path` and `trash_path`.
 
-The script can be run with an argument of a directory; otherwise, it will traverse the current directory looking for videos to encode.
+The script can be run with an argument of a directory; otherwise, it will traverse the current directory looking for videos to encode. Multiple directories can be colon-separated. For example:
+
+```ruby shrink-video.rb
+ruby shrink-video.rb directory
+ruby shrink-video.rb directory1:/directory2:~/Videos/Directory\ Three
+```
