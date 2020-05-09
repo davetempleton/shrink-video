@@ -17,7 +17,8 @@ You will need ruby, ffmpeg (for ffprobe), and HandBrakeCLI. On Ubuntu 16.04 and 
 
 The script can be run with an argument of a directory; otherwise, it will traverse the current directory looking for videos to encode. Multiple directories can be colon-separated. For example:
 
-```ruby shrink-video.rb
+```
+ruby shrink-video.rb
 ruby shrink-video.rb directory
 ruby shrink-video.rb directory1:/directory2:~/Videos/Directory\ Three
 ```
